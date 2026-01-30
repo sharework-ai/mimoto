@@ -96,10 +96,16 @@ public class MimotoUtil extends AdminTestUtil {
 		String modifiedTestCaseName = testCaseName.substring(indexof + 1);
 
 		addTestCaseDetailsToMap(modifiedTestCaseName, testCaseDTO.getUniqueIdentifier());
-
+		
 		if (!testCasesInRunScope.isEmpty()
 				&& testCasesInRunScope.contains(testCaseDTO.getUniqueIdentifier()) == false) {
 			throw new SkipException(GlobalConstants.NOT_IN_RUN_SCOPE_MESSAGE);
+		}
+
+		// Handle extra workflow dependencies
+		if (testCaseDTO != null && testCaseDTO.getAdditionalDependencies() != null
+				&& AdminTestUtil.generateDependency == true) {
+			addAdditionalDependencies(testCaseDTO);
 		}
 
 		String endpoint = testCaseDTO.getEndPoint();

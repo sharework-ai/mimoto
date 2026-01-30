@@ -56,6 +56,7 @@ import io.mosip.testrig.apirig.utils.SkipTestCaseHandler;
 public class MosipTestRunner {
 	private static final Logger LOGGER = Logger.getLogger(MosipTestRunner.class);
 	private static String cachedPath = null;
+	private static String generateDependency;
 
 	public static String jarUrl = MosipTestRunner.class.getProtectionDomain().getCodeSource().getLocation().getPath();
 	public static List<String> languageList = new ArrayList<>();
@@ -105,11 +106,13 @@ public class MosipTestRunner {
 			BiometricDataProvider.generateBiometricTestData("Registration");
 			
 			String testCasesToExecuteString = MimotoConfigManager.getproperty("testCasesToExecute");
+			generateDependency = MimotoConfigManager.getproperty("generateDependencyJson");
 
-			DependencyResolver.loadDependencies(getGlobalResourcePath() + "/" + "config/testCaseInterDependency.json");
-
-			if (!testCasesToExecuteString.isBlank()) {
-				MimotoUtil.testCasesInRunScope = DependencyResolver.getDependencies(testCasesToExecuteString);
+			if (!"yes".equalsIgnoreCase(generateDependency)) {
+				if (testCasesToExecuteString != null && !testCasesToExecuteString.isBlank()) {
+					DependencyResolver.loadDependencies(BaseTestCase.testCaseInterDependencyPath);
+					MimotoUtil.testCasesInRunScope = DependencyResolver.getDependencies(testCasesToExecuteString);
+				}
 			}
 
 			startTestRunner();
@@ -122,11 +125,12 @@ public class MosipTestRunner {
 		KeycloakUserManager.closeKeycloakInstance();
 
 		OTPListener.bTerminate = true;
-
 		HealthChecker.bTerminate = true;
 		
-		// Used for generating the test case interdependency JSON file
-		//AdminTestUtil.generateTestCaseInterDependencies(getGlobalResourcePath() + "/config/testCaseInterDependency.json");
+		if ("yes".equalsIgnoreCase(generateDependency)) {
+			LOGGER.info("Generating test case inter-dependencies");
+			AdminTestUtil.generateTestCaseInterDependencies(BaseTestCase.testCaseInterDependencyPath);
+		}
 
 		System.exit(0);
 
