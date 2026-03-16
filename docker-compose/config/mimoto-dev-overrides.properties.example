@@ -1,0 +1,102 @@
+# Mimoto 开发环境配置覆盖示例
+# 此文件只包含需要覆盖的配置项，保持默认配置的完整性
+
+# ==========================================
+# 服务端点配置 - 开发环境
+# ==========================================
+mosip.api.public.url=http://localhost:8099
+mosipbox.public.url=http://localhost:8099
+mosip.inji.web.url=http://localhost:3004
+mosip.data.share.url=http://localhost:8097
+
+# 内部服务端点（容器间通信）
+# mosip.esignet.host=http://esignet:8088
+# keycloak.internal.url=http://keycloak:8080
+
+# ==========================================
+# 数据库配置 - 开发环境
+# ==========================================
+spring.datasource.url=jdbc:postgresql://postgres:5432/inji_mimoto
+spring.datasource.username=postgres
+spring.datasource.password=postgres
+
+# Keymanager 数据库配置
+keymanager_database_url=${SPRING_DATASOURCE_URL}
+keymanager_database_password=${POSTGRES_PASSWORD}
+keymanager_database_username=mimotouser
+
+# ==========================================
+# OAuth2 配置 - 开发环境
+# ==========================================
+# Google OAuth2 (如果使用)
+# spring.security.oauth2.client.registration.google.client-id=your-client-id
+# spring.security.oauth2.client.registration.google.client-secret=your-client-secret
+
+# OIDC Keystore 配置
+mosip.oidc.p12.password=mosip123
+mosip.kernel.keymanager.hsm.keystore-pass=mosip123
+
+# ==========================================
+# 缓存配置 - 开发环境
+# ==========================================
+# 使用本地缓存（生产环境建议使用 Redis）
+spring.cache.type=caffeine
+spring.session.store-type=caffeine
+
+# ==========================================
+# 日志配置 - 开发环境
+# ==========================================
+logging.level.root=INFO
+logging.level.io.mosip=DEBUG
+logging.level.io.mosip.mimoto=DEBUG
+logging.level.org.springframework.web.client=DEBUG
+
+# ==========================================
+# 安全配置 - 开发环境
+# ==========================================
+# CORS 配置 - 允许本地开发
+mosip.security.cors-enable=true
+mosip.security.origins=http://localhost:3004,http://localhost:8099
+
+# 认证配置 - 开发环境可以禁用某些安全检查
+mosip.auth.filter_disable=false
+
+# ==========================================
+# WebSub 配置 - 开发环境
+# ==========================================
+mosip.websub.url=http://websub.websub/
+mosip.event.callBackUrl=${mosip.api.public.url}/v1/mimoto/credentialshare/callback/notify
+
+# ==========================================
+# VC 下载配置 - 开发环境
+# ==========================================
+mosip.inji.vcDownloadMaxRetry=5
+mosip.inji.vcDownloadPoolInterval=3000
+
+# ==========================================
+# 配置服务器 - 开发环境
+# ==========================================
+# 如果使用本地配置服务器，取消注释以下配置
+# spring.cloud.config.uri=http://localhost:8888
+# config.server.file.storage.uri=http://localhost:8888/
+
+# ==========================================
+# 性能调优 - 开发环境
+# ==========================================
+# 减少超时时间以便快速发现问题
+mosip.inji.openId4VCIDownloadVCTimeout=10000
+
+# ==========================================
+# 开发工具配置
+# ==========================================
+# 启用 Actuator 端点
+management.endpoints.web.exposure.include=info,health,refresh,env,configprops
+management.endpoint.health.show-details=always
+
+# ==========================================
+# 注意事项
+# ==========================================
+# 1. 将此文件复制为 mimoto-dev-local.properties 并根据实际情况修改
+# 2. 不要将包含敏感信息的配置文件提交到版本控制
+# 3. 生产环境使用 mimoto-prod.properties 并启用所有安全配置
+# 4. 使用环境变量传递敏感信息，不要在此文件中硬编码

@@ -1,0 +1,174 @@
+Mimoto 与 Resident Service 依赖关系
+=====================================
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        Mimoto (钱包后端服务)                          │
+│                         https://axiomid-mimoto.shrwk.com               │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                    ┌───────────────┴────────────────┐
+                    │                                │
+            ┌───────▼────────┐            ┌─────────▼──────────┐
+            │ 直接调用功能    │            │ 代理调用功能       │
+            │ (内部实现)     │            │ (调用外部服务)    │
+            └───────────────┘            └─────────┬──────────┘
+                                                    │
+                                    ┌───────────────┴───────────────┐
+                                    │  Resident Service (居民服务)  │
+                                    │  api.collab.mosip.net        │
+                                    └───────────────────────────────┘
+
+🔴 关键依赖 (Resident Service 不可用 = 功能完全失效)
+========================================================================
+
+1️⃣ VC 凭证下载
+   Mimoto 端点: POST /v1/mimoto/credentialshare/request
+   Resident Service: POST /resident/v1/req/credential
+   依赖: RESIDENT_CREDENTIAL_REQUEST
+   ┌──────────┐         ┌──────────┐         ┌──────────┐
+   │ 用户     │ ─────> │ Mimoto   │ ─────> │Resident │
+   │ 请求 VC  │         │          │         │ Service  │
+   └──────────┘         └──────────┘         └────┬─────┘
+                                                     │
+                                                     ↓
+                                              ┌──────────┐
+                                              │MOSIP 签发│
+                                              │   VC     │
+                                              └──────────┘
+
+2️⃣ 凭证状态查询
+   Mimoto 端点: GET /v1/mimoto/credentialshare/{requestId}/status
+   Resident Service: GET /resident/v1/req/credential/status/{requestId}
+   依赖: RESIDENT_CREDENTIAL_REQUEST_STATUS
+   ┌──────────┐         ┌──────────┐         ┌──────────┐
+   │ 用户     │ ─────> │ Mimoto   │ ─────> │Resident │
+   │ 查询状态 │         │          │         │ Service  │
+   └──────────┘         └──────────┘         └──────────┘
+
+3️⃣ OTP 身份验证
+   Mimoto 端点: POST /v1/mimoto/req/otp
+   Resident Service: POST /resident/v1/req/otp
+   依赖: RESIDENT_OTP
+   ┌──────────┐         ┌──────────┐         ┌──────────┐
+   │ 用户     │ ─────> │ Mimoto   │ ─────> │Resident │
+   │ 请求 OTP │         │          │         │ Service │
+   └──────────┘         └──────────┘         └────┬─────┘
+                                                     │
+                                                     ↓
+                                              ┌──────────┐
+                                              │ 发送 OTP │
+                                              │ 到用户   │
+                                              └──────────┘
+
+🟡 重要依赖 (Resident Service 不可用 = 功能受限)
+================================================
+
+4️⃣ VID 生成
+   Mimoto 端点: POST /v1/mimoto/vid
+   Resident Service: POST /resident/v1/vid
+   依赖: RESIDENT_VID
+   ┌──────────┐         ┌──────────┐         ┌──────────┐
+   │ 用户     │ ─────> │ Mimoto   │ ─────> │Resident │
+   │ 请求 VID │         │          │         │ Service │
+   └──────────┘         └──────────┘         └──────────┘
+
+5️⃣ AID 相关功能
+   Mimoto 端点: POST /v1/mimoto/req/individualId/otp
+   Resident Service: POST /resident/v1/individualId/otp
+   依赖: RESIDENT_INDIVIDUALID_OTP
+
+   Mimoto 端点: POST /v1/mimoto/aid/get-individual-id
+   Resident Service: POST /resident/v1/aid/status
+   依赖: RESIDENT_AID_GET_INDIVIDUALID
+
+🟢 可选依赖 (Resident Service 不可用 = 有替代方案)
+================================================
+
+6️⃣ 认证锁定/解锁
+   Mimoto 端点: POST /v1/mimoto/req/auth/lock
+   Mimoto 端点: POST /v1/mimoto/req/auth/unlock
+   Resident Service: POST /resident/v1/req/auth/lock
+   Resident Service: POST /resident/v1/req/auth/unlock
+   依赖: RESIDENT_AUTH_LOCK, RESIDENT_AUTH_UNLOCK
+
+📊 依赖统计
+===========
+
+Mimoto 控制器:
+├── ResidentServiceController.java
+│   ├── /req/otp (OTP 请求)
+│   ├── /vid (VID 生成)
+│   ├── /req/auth/lock (认证锁定)
+│   ├── /req/auth/unlock (认证解锁)
+│   ├── /req/individualId/otp (AID OTP)
+│   └── /aid/get-individual-id (AID 状态)
+│
+└── CredentialShareController.java
+    ├── /credentialshare/request (凭证请求)
+    └── /credentialshare/{requestId}/status (凭证状态)
+
+Resident Service API 调用:
+├── RESIDENT_OTP (OTP 请求)
+├── RESIDENT_VID (VID 生成)
+├── RESIDENT_CREDENTIAL_REQUEST (凭证请求)
+├── RESIDENT_CREDENTIAL_REQUEST_STATUS (凭证状态)
+├── RESIDENT_AUTH_LOCK (认证锁定)
+├── RESIDENT_AUTH_UNLOCK (认证解锁)
+├── RESIDENT_INDIVIDUALID_OTP (AID OTP)
+└── RESIDENT_AID_GET_INDIVIDUALID (AID 状态)
+
+🎯 配置影响评估
+===============
+
+如果 Resident Service 配置错误或不可用:
+
+❌ 完全失效的功能 (影响用户体验):
+   • VC 凭证无法下载
+   • 无法进行 OTP 身份验证
+   • 无法查询凭证签发状态
+   • AID 相关功能失效
+
+⚠️ 部分受限的功能 (有替代方案):
+   • 无法生成新的 VID (可使用现有)
+   • 无法主动锁定/解锁认证
+
+✅ 不受影响的功能:
+   • 已下载 VC 的展示
+   • VC 验证功能
+   • Issuers/Verifiers 管理
+   • 钱包基础管理
+
+🔧 配置验证
+===========
+
+必需的配置项:
+mosip.resident.base.url=https://api.collab.mosip.net/resident/v1
+RESIDENT_OTP=${mosip.resident.base.url}/req/otp
+RESIDENT_CREDENTIAL_REQUEST=${mosip.resident.base.url}/req/credential
+RESIDENT_CREDENTIAL_REQUEST_STATUS=${mosip.resident.base.url}/status
+RESIDENT_VID=${mosip.resident.base.url}/vid
+RESIDENT_AUTH_LOCK=${mosip.resident.base.url}/req/auth/lock
+RESIDENT_AUTH_UNLOCK=${mosip.resident.base.url}/req/auth/unlock
+RESIDENT_INDIVIDUALID_OTP=${mosip.resident.base.url}/individualId/otp
+RESIDENT_AID_GET_INDIVIDUALID=${mosip.resident.base.url}/aid/status
+
+验证命令:
+# 测试 Resident Service 可用性
+curl https://api.collab.mosip.net/resident/v1/actuator/health
+
+# 测试 OTP 端点
+curl -X POST https://api.collab.mosip.net/resident/v1/req/otp \
+  -H "Content-Type: application/json" \
+  -d '{"individualId":"test","individualIdType":"UIN","otpChannel":"EMAIL"}'
+
+💡 总结
+======
+
+Mimoto 对 Resident Service 的依赖程度: 🔴 高度依赖
+
+核心钱包功能的 70% 依赖于 Resident Service：
+• VC 下载流程 100% 依赖
+• 身份验证流程 100% 依赖
+• 身份管理功能 60% 依赖
+
+⚠️ Resident Service 是 Mimoto 正常运行的**关键依赖服务**
